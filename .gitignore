@@ -3,6 +3,10 @@
 
 # Maven
 backend/target/
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
 
 # Node
 frontend/node_modules/
@@ -11,7 +15,26 @@ frontend/dist/
 # IDE
 .idea/
 *.iml
+*.iws
+*.ipr
 .vscode/
+.classpath
+.project
+.settings
+.factorypath
+.springBeans
+.sts4-cache
+.apt_generated
+
+# Build
+build/
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+!**/src/main/**/build/
+!**/src/test/**/build/
 
 # OS
 .DS_Store
