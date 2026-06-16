@@ -41,7 +41,8 @@
 <script setup>
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { printDepositReceipt, printDaily } from '../api'
+import { printDepositReceipt, printDaily, getPrintFormData } from '../api'
+import { generateTravelApplicationForm } from '../utils/printTemplates'
 
 const singleAppId = ref(null)
 const history = ref([])
@@ -49,9 +50,24 @@ const history = ref([])
 const printSingle = async () => {
   if (!singleAppId.value) { ElMessage.warning('请输入申请编号'); return }
   try {
+    // 1. 获取打印所需完整数据
+    const formRes = await getPrintFormData(singleAppId.value)
+    const formData = formRes.data.data
+
+    // 2. 生成旅游申请书 HTML 并打开打印窗口
+    const html = generateTravelApplicationForm(formData)
+    const printWindow = window.open('', '_blank', 'width=800,height=600')
+    if (printWindow) {
+      printWindow.document.write(html)
+      printWindow.document.close()
+    } else {
+      ElMessage.warning('弹窗被浏览器拦截，请允许弹窗后重试')
+    }
+
+    // 3. 记录打印到数据库（保留原有行为）
     const res = await printDepositReceipt(singleAppId.value, 1)
-    ElMessage.success('订金收据打印成功')
     history.value.unshift(res.data.data)
+    ElMessage.success('订金收据打印成功')
   } catch (e) { ElMessage.error(e.response?.data?.msg || '打印失败') }
 }
 

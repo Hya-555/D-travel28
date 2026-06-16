@@ -1,15 +1,24 @@
 package com.travel.service.impl;
 
 import com.travel.config.BusinessException;
+import com.travel.dto.PrintFormData;
 import com.travel.entity.Application;
 import com.travel.entity.Receipt;
+import com.travel.entity.TourGroup;
+import com.travel.entity.TourPrice;
+import com.travel.entity.TourRoute;
 import com.travel.mapper.ApplicationMapper;
 import com.travel.mapper.ReceiptMapper;
+import com.travel.mapper.TourGroupMapper;
+import com.travel.mapper.TourPriceMapper;
+import com.travel.mapper.TourRouteMapper;
 import com.travel.service.ReceiptService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,6 +31,9 @@ public class ReceiptServiceImpl implements ReceiptService {
 
     private final ReceiptMapper receiptMapper;
     private final ApplicationMapper applicationMapper;
+    private final TourGroupMapper tourGroupMapper;
+    private final TourRouteMapper tourRouteMapper;
+    private final TourPriceMapper tourPriceMapper;
 
     @Override
     @Transactional
@@ -77,5 +89,69 @@ public class ReceiptServiceImpl implements ReceiptService {
             }
         }
         return receipts;
+    }
+
+    @Override
+    public PrintFormData getPrintFormData(Long applicationId) {
+        // 1. 查询申请
+        Application app = applicationMapper.selectById(applicationId);
+        if (app == null) {
+            throw new BusinessException("申请不存在");
+        }
+
+        // 2. 查询旅游团
+        TourGroup group = tourGroupMapper.selectById(app.getGroupCode());
+        if (group == null) {
+            throw new BusinessException("旅游团不存在");
+        }
+
+        // 3. 查询路线
+        TourRoute route = tourRouteMapper.selectById(group.getRouteCode());
+        if (route == null) {
+            throw new BusinessException("路线不存在");
+        }
+
+        // 4. 查询最新公开价格（可能为空——价格被取消公开时回退为零）
+        TourPrice price = tourPriceMapper.selectOne(new LambdaQueryWrapper<TourPrice>()
+                .eq(TourPrice::getGroupCode, app.getGroupCode())
+                .eq(TourPrice::getIsPublished, 1)
+                .orderByDesc(TourPrice::getSetTime)
+                .last("LIMIT 1"));
+
+        BigDecimal adultPrice = price != null ? price.getAdultPrice() : BigDecimal.ZERO;
+        BigDecimal childPrice = price != null ? price.getChildPrice() : BigDecimal.ZERO;
+        String discountDesc = price != null ? price.getDiscountDesc() : "";
+
+        // 5. 组装 PrintFormData
+        PrintFormData data = new PrintFormData();
+        // 申请信息
+        data.setApplicationId(app.getApplicationId());
+        data.setGroupCode(app.getGroupCode());
+        data.setDepartureDate(app.getDepartureDate());
+        data.setContactName(app.getContactName());
+        data.setContactPhone(app.getContactPhone());
+        data.setAdultCount(app.getAdultCount());
+        data.setChildCount(app.getChildCount());
+        data.setDepositAmount(app.getDepositAmount());
+        data.setTotalAmount(app.getTotalAmount());
+        data.setPaidAmount(app.getPaidAmount());
+        data.setStatus(app.getStatus());
+        data.setApplyTime(app.getApplyTime());
+        // 旅游团信息
+        data.setRouteCode(group.getRouteCode());
+        data.setDeadline(group.getDeadline());
+        // 路线信息
+        data.setRouteName(route.getRouteName());
+        data.setRouteDescription(route.getDescription());
+        // 价格信息
+        data.setAdultPrice(adultPrice);
+        data.setChildPrice(childPrice);
+        data.setDiscountDesc(discountDesc);
+        // 计算字段
+        data.setAdultSubtotal(adultPrice.multiply(BigDecimal.valueOf(app.getAdultCount())));
+        data.setChildSubtotal(childPrice.multiply(BigDecimal.valueOf(app.getChildCount())));
+        data.setBalanceDue(app.getTotalAmount().subtract(app.getPaidAmount()));
+
+        return data;
     }
 }

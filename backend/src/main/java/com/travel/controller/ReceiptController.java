@@ -1,5 +1,6 @@
 package com.travel.controller;
 
+import com.travel.dto.PrintFormData;
 import com.travel.dto.R;
 import com.travel.entity.Receipt;
 import com.travel.service.ReceiptService;
@@ -14,6 +15,12 @@ import java.util.List;
 public class ReceiptController {
 
     private final ReceiptService receiptService;
+
+    /** 获取打印旅游申请书所需的完整数据 */
+    @GetMapping("/print-form/{applicationId}")
+    public R<PrintFormData> getPrintFormData(@PathVariable Long applicationId) {
+        return R.ok(receiptService.getPrintFormData(applicationId));
+    }
 
     /** 打印订金收据 */
     @PostMapping("/deposit/{applicationId}")

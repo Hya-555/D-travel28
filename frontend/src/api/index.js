@@ -24,6 +24,7 @@ export const getPayments = (applicationId) => api.get(`/payment/list/${applicati
 export const cancelApplication = (data) => api.post('/cancel', data)
 
 // ====== 收据相关 ======
+export const getPrintFormData = (applicationId) => api.get(`/receipt/print-form/${applicationId}`)
 export const printDepositReceipt = (applicationId, employeeId) => api.post(`/receipt/deposit/${applicationId}?employeeId=${employeeId || 1}`)
 export const printDaily = (employeeId) => api.post(`/receipt/daily?employeeId=${employeeId || 1}`)
 
